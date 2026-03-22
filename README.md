@@ -1,73 +1,88 @@
-# React + TypeScript + Vite
+# Artisan Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Artisan is a full-stack e-commerce marketplace platform for artisans to sell their hand-crafted goods and for buyers to discover unique products. This repository contains the React-based frontend of the platform.
 
-Currently, two official plugins are available:
+## 🚀 Key Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Storefront & Discovery**: Browse unique artisan products, search by keywords, and filter by categories.
+- **Authentication**: Secure registration and login for both Buyers and Sellers.
+- **Product Details**: Comprehensive view of artisan products with high-quality images, descriptions, and ratings.
+- **Reviews & Ratings**: Integrated feedback system for buyers to share their experiences.
+- **Shopping Cart**: Real-time cart management with seamless addition and removal of items.
+- **Order Management**: Streamlined checkout process and order history tracking.
+- **Seller Dashboard**: Dedicated space for artisans to manage their listings, inventory, and track sales.
+- **Responsive Design**: Optimized for a premium experience across desktops, tablets, and mobile devices.
 
-## React Compiler
+## 🛠️ Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Core**: [React 18](https://react.dev/) + [Vite](https://vitejs.dev/) + [TypeScript](https://www.typescriptlang.org/)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **UI Components**: [Shadcn UI](https://ui.shadcn.com/) (Radix UI, Lucide React)
+- **Data Fetching**: [TanStack Query v5](https://tanstack.com/query/latest) (React Query)
+- **Routing**: [React Router v6](https://reactrouter.com/)
+- **State Management**: React Context API (Auth, Cart)
+- **Forms**: React Hook Form + [Zod](https://zod.dev/)
+- **Feedback**: [Sonner](https://sonner.emilkowal.ski/) (Toasts)
+- **Charts**: [Recharts](https://recharts.org/) (Seller analytics)
+- **Testing**: [Vitest](https://vitest.dev/) (Unit/Integration), [Playwright](https://playwright.test/) (End-to-End)
 
-## Expanding the ESLint configuration
+## 📁 Project Structure
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```text
+src/
+├── components/   # Reusable UI components (shadcn/ui + custom)
+├── contexts/     # Auth and Cart context providers
+├── hooks/        # Custom React hooks
+├── lib/          # API layer and utility functions
+├── pages/        # Application routes (Home, Listings, Dashboard, etc.)
+└── test/         # Testing utilities and setups
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 🚦 Getting Started
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Prerequisites
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- Node.js (v18+)
+- npm or yarn
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd Artisan-Frontend
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Configure environment variables:
+   Create a `.env` file in the root directory and set the API base URL:
+   ```env
+   VITE_API_URL=http://localhost:8084
+   ```
+
+### Running Locally
+
+```bash
+npm run dev
 ```
+The app will be available at `http://localhost:5173`.
+
+## 📜 Scripts
+
+| Command | Description |
+| :--- | :--- |
+| `npm run dev` | Starts the development server. |
+| `npm run build` | Builds the project for production. |
+| `npm run preview` | Previews the production build locally. |
+| `npm run lint` | Runs ESLint to check for code quality issues. |
+| `npm run test` | Runs unit and integration tests using Vitest. |
+
+## 🧪 Testing
+
+- **Unit/Integration**: Run `npm run test` to execute Vitest tests.
+- **E2E**: Use Playwright for end-to-end testing (run `npx playwright test`).
+
