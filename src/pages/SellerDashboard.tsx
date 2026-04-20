@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { listingApi, orderApi, reviewApi, type CreateListingPayload, type Listing, type Order, type Review } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Loader2, MessageSquare, Package, Plus, RefreshCw, Store, X } from "lucide-react";
+import { Loader2, MessageSquare, Package, Pencil, Plus, RefreshCw, Send, Store, X } from "lucide-react";
 
 const CATEGORIES = ["jewelry", "textiles", "pottery", "woodwork"];
 
@@ -23,6 +23,9 @@ const initialForm = (): Omit<CreateListingPayload, "sellerId"> => ({
   country: "",
 });
 
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error && error.message ? error.message : fallback;
+
 export default function SellerDashboard() {
   const { user } = useAuth();
   const [form, setForm] = useState<Omit<CreateListingPayload, "sellerId">>(initialForm);
@@ -32,6 +35,9 @@ export default function SellerDashboard() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [reviews, setReviews] = useState<SellerReview[]>([]);
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
+  const [replyingReviewId, setReplyingReviewId] = useState<string | null>(null);
+  const [editingReplyReviewId, setEditingReplyReviewId] = useState<string | null>(null);
 
   const update = <K extends keyof Omit<CreateListingPayload, "sellerId">>(
     key: K,
@@ -65,18 +71,21 @@ export default function SellerDashboard() {
 
       setListings(sellerListings);
       setOrders(sellerOrders);
-      setReviews(
-        sellerReviews.map((review) => ({
+      const reviewsWithListings = sellerReviews.map((review) => ({
           ...review,
           listingTitle: listingTitleById[review.listingId] || "Listing",
-        })),
+        }));
+
+      setReviews(reviewsWithListings);
+      setReplyDrafts(
+        Object.fromEntries(reviewsWithListings.map((review) => [review.id, review.sellerReply || ""])),
       );
 
       if (sellerOrdersResult.status === "rejected" || sellerReviewsResult.status === "rejected") {
         toast.error("Some dashboard sections could not be loaded");
       }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to load seller workspace");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Failed to load seller workspace"));
     } finally {
       setLoading(false);
     }
@@ -101,10 +110,62 @@ export default function SellerDashboard() {
       setImageUrl("");
       toast.success("Listing created");
       await loadDashboard();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to create listing");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Failed to create listing"));
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const updateReplyDraft = (reviewId: string, value: string) => {
+    setReplyDrafts((current) => ({ ...current, [reviewId]: value }));
+  };
+
+  const startEditingReply = (review: SellerReview) => {
+    setReplyDrafts((current) => ({ ...current, [review.id]: review.sellerReply || "" }));
+    setEditingReplyReviewId(review.id);
+  };
+
+  const cancelEditingReply = (review: SellerReview) => {
+    setReplyDrafts((current) => ({ ...current, [review.id]: review.sellerReply || "" }));
+    setEditingReplyReviewId(null);
+  };
+
+  const handleReplySubmit = async (event: React.FormEvent<HTMLFormElement>, review: SellerReview) => {
+    event.preventDefault();
+    if (!user || user.role !== "SELLER") return;
+
+    const reply = (replyDrafts[review.id] || "").trim();
+    if (!reply) {
+      toast.error("Write a reply before submitting");
+      return;
+    }
+
+    setReplyingReviewId(review.id);
+    try {
+      const updatedReview = await reviewApi.replyToReview(review.id, {
+        sellerId: user.userId,
+        reply,
+      });
+
+      setReviews((current) =>
+        current.map((item) =>
+          item.id === review.id
+            ? {
+                ...item,
+                ...updatedReview,
+                listingTitle: item.listingTitle,
+              }
+            : item,
+        ),
+      );
+      setReplyDrafts((current) => ({ ...current, [review.id]: updatedReview.sellerReply || reply }));
+      setEditingReplyReviewId(null);
+      toast.success(review.sellerReply ? "Reply updated" : "Reply posted");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Failed to save reply"));
+    } finally {
+      setReplyingReviewId(null);
     }
   };
 
@@ -398,18 +459,91 @@ export default function SellerDashboard() {
               <p className="text-sm text-muted-foreground">No reviews yet.</p>
             ) : (
               <div className="space-y-3">
-                {reviews.slice(0, 6).map((review) => (
-                  <div key={review.id} className="rounded-xl border p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium">{review.userDisplayName}</p>
-                        <p className="text-sm text-muted-foreground">{review.listingTitle}</p>
+                {reviews.slice(0, 6).map((review) => {
+                  const replyDraft = replyDrafts[review.id] ?? review.sellerReply ?? "";
+                  const isSavingReply = replyingReviewId === review.id;
+                  const isEditingReply = editingReplyReviewId === review.id;
+                  const showReplyForm = !review.sellerReply || isEditingReply;
+
+                  return (
+                    <div key={review.id} className="rounded-xl border p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium">{review.userDisplayName}</p>
+                          <p className="text-sm text-muted-foreground">{review.listingTitle}</p>
+                        </div>
+                        <span className="text-sm font-medium">{review.rating}/5</span>
                       </div>
-                      <span className="text-sm font-medium">{review.rating}/5</span>
+                      <p className="mt-3 text-sm text-muted-foreground">{review.comment || "No written comment."}</p>
+
+                      {review.sellerReply && (
+                        <div className="mt-4 rounded-lg bg-muted/60 p-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Your reply</p>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 shrink-0"
+                              onClick={() => startEditingReply(review)}
+                              aria-label="Edit reply"
+                              title="Edit reply"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <p className="mt-1 text-sm">{review.sellerReply}</p>
+                          {review.sellerReplyUpdatedAt && (
+                            <p className="mt-2 text-xs text-muted-foreground">
+                              Updated {new Date(review.sellerReplyUpdatedAt).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {showReplyForm && (
+                        <form onSubmit={(event) => handleReplySubmit(event, review)} className="mt-4 space-y-2">
+                          <label htmlFor={`seller-reply-${review.id}`} className="text-sm font-medium">
+                            {review.sellerReply ? "Edit reply" : "Reply to review"}
+                          </label>
+                          <textarea
+                            id={`seller-reply-${review.id}`}
+                            value={replyDraft}
+                            onChange={(event) => updateReplyDraft(review.id, event.target.value)}
+                            maxLength={1000}
+                            rows={3}
+                            className="min-h-[88px] w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                            placeholder="Write a public response for this customer."
+                          />
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-xs text-muted-foreground">{replyDraft.length}/1000 characters</span>
+                            <div className="flex items-center gap-2">
+                              {review.sellerReply && (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => cancelEditingReply(review)}
+                                  disabled={isSavingReply}
+                                >
+                                  Cancel
+                                </Button>
+                              )}
+                              <Button type="submit" size="sm" disabled={isSavingReply || !replyDraft.trim()}>
+                                {isSavingReply ? (
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Send className="mr-2 h-4 w-4" />
+                                )}
+                                {isSavingReply ? "Saving..." : review.sellerReply ? "Save reply" : "Post reply"}
+                              </Button>
+                            </div>
+                          </div>
+                        </form>
+                      )}
                     </div>
-                    <p className="mt-3 text-sm text-muted-foreground">{review.comment || "No written comment."}</p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>

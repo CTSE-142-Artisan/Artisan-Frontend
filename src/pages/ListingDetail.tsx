@@ -8,6 +8,9 @@ import StarRating from "@/components/StarRating";
 import { Loader2, ShoppingCart, Minus, Plus } from "lucide-react";
 import { toast } from "sonner";
 
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error && error.message ? error.message : fallback;
+
 export default function ListingDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -48,8 +51,8 @@ export default function ListingDetailPage() {
       toast.success("Added to cart!");
       // Optionally navigate to cart
       setTimeout(() => navigate("/cart"), 500);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to add to cart");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Failed to add to cart"));
     } finally {
       setAdding(false);
     }
@@ -193,6 +196,19 @@ export default function ListingDetailPage() {
                   <StarRating rating={r.rating} size={14} />
                 </div>
                 <p className="text-sm text-muted-foreground">{r.comment}</p>
+                {r.sellerReply && (
+                  <div className="mt-3 rounded-lg bg-muted/60 p-3">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Seller reply
+                    </p>
+                    <p className="mt-1 text-sm">{r.sellerReply}</p>
+                    {r.sellerReplyUpdatedAt && (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Updated {new Date(r.sellerReplyUpdatedAt).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
